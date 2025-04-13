@@ -1,5 +1,10 @@
 import { OPENAI_RESPONSES_URL } from 'src/openai/chatGPT'
 
+export interface ChatStreamAction {
+	name: string
+	prompt: string
+}
+
 export interface ChatStreamSettings {
 	/**
 	 * The API key to use when making requests
@@ -45,6 +50,10 @@ export interface ChatStreamSettings {
 	 * The maximum depth of ancestor notes to include. 0 means no limit.
 	 */
 	maxDepth: number
+	/**
+	 * Custom triggers available in the context menu.
+	 */
+	contextMenuActions: ChatStreamAction[]
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `
@@ -64,7 +73,8 @@ export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	debug: false,
 	maxInputTokens: 0,
 	maxResponseTokens: 0,
-	maxDepth: 0
+	maxDepth: 0,
+	contextMenuActions: []
 }
 
 export async function fetchModels(apiUrl: string, apiKey: string): Promise<string[]> {

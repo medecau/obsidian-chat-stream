@@ -311,3 +311,49 @@ function getTokenLimit(settings: ChatStreamSettings): number {
 		return defaultLimit
 	}
 }
+
+/**
+ * Generates a placeholder summary for a given note.
+ * @param note The input note string.
+ * @returns A summary string (first 100 chars + ellipsis).
+ */
+export function summarizeNote(note: string): string {
+	const maxLength = 100
+	if (note.length <= maxLength) {
+		return note
+	}
+	return note.substring(0, maxLength) + '...'
+}
+
+/**
+ * Extracts placeholder action items from a note.
+ * @param note The input note string (currently unused).
+ * @returns An array of placeholder action item strings.
+ */
+export function extractActionItems(note: string): string[] {
+	// Placeholder: Return fixed action items
+	// Future: Implement logic to find lines like "- [ ] Action" or similar
+	return ['- [ ] Action item 1', '- [ ] Action item 2']
+}
+
+/**
+ * Rewrites a note for clarity using a placeholder method (uppercase).
+ * @param note The input note string.
+ * @returns The note converted to uppercase.
+ */
+export function rewriteForClarity(note: string): string {
+	// Placeholder: Convert to uppercase
+	// Future: Implement actual clarity rewriting logic
+	return note.toUpperCase()
+}
+
+/**
+ * Generates placeholder questions based on a note.
+ * @param note The input note string (currently unused).
+ * @returns An array of placeholder question strings.
+ */
+export function generateQuestions(note: string): string[] {
+	// Placeholder: Return fixed questions
+	// Future: Implement logic to generate relevant questions
+	return ['What is the main point of this note?', 'What are the key takeaways?', 'Are there any unclear parts?']
+}

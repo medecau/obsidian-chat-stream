@@ -1,4 +1,4 @@
-import { Plugin, App, PluginManifest, Menu } from 'obsidian' // Added Menu
+import { Plugin, App, PluginManifest, Menu, Editor, MarkdownView, EventRef } from 'obsidian' // Added Menu, Editor, MarkdownView, EventRef
 import {
 	ChatStreamSettings,
 	DEFAULT_SETTINGS
@@ -96,6 +96,38 @@ export class ChatStreamPlugin extends Plugin {
 							})
 					})
 				}
+			})
+		)
+
+		// Add context menu items for editor based on dynamic triggers
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
+				// Retrieve the current actions *inside* the callback to ensure freshness
+				const currentActions = this.settings.contextMenuActions
+
+				if (!currentActions || currentActions.length === 0) {
+					return // No actions defined in settings
+				}
+
+				// Iterate over the *current* actions retrieved above
+				currentActions.forEach(action => {
+					// Ensure the action has both a name and a prompt to be valid
+					if (action.name && action.prompt) {
+						menu.addItem((item) => {
+							item
+								.setTitle(action.name) // Use the action's name for the menu item
+								.setIcon('lucide-wand') // Keep the icon (or adjust if needed)
+								.onClick(async () => {
+									// Get the editor content at the moment the item is clicked
+									const currentContent = editor.getValue()
+									// Prepend the action's prompt and a newline
+									const newContent = `${action.prompt}\n${currentContent}`
+									// Update the editor with the new content
+									editor.setValue(newContent)
+								})
+						})
+					}
+				})
 			})
 		)
 	}

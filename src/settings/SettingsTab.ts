@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, DropdownComponent, TextComponent } from 'obsidian'
+import { App, PluginSettingTab, Setting, DropdownComponent, TextComponent, ButtonComponent, TextAreaComponent } from 'obsidian'
 import { ChatStreamPlugin } from 'src/ChatStreamPlugin'
 import { getModels } from './ChatStreamSettings'
 // Default models are no longer imported from chatGPT.ts
@@ -255,6 +255,93 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings()
 					})
 			})
+
+		// --- Context Menu Triggers Section ---
+		new Setting(containerEl)
+			.setName('Context Menu Actions')
+			.setHeading()
+
+		// Ensure contextMenuTriggers exists and is an array
+		if (!Array.isArray(this.plugin.settings.contextMenuActions)) {
+			this.plugin.settings.contextMenuActions = []
+			await this.plugin.saveSettings()
+		}
+
+		this.plugin.settings.contextMenuActions.forEach((action, index) => {
+			const setting = new Setting(containerEl) // Create the single setting container
+
+			// --- Manual DOM Manipulation within setting.controlEl ---
+
+			// Container for the top row (name input + delete button)
+			const topRowContainer = setting.controlEl.createDiv({ cls: 'chat-stream-action-top-row' })
+			topRowContainer.style.display = 'flex'        // Use flexbox for horizontal layout
+			topRowContainer.style.alignItems = 'center'   // Vertically align items in the row
+			topRowContainer.style.marginBottom = '8px'    // Space below the top row
+
+			// Name Input Component (added to topRowContainer)
+			const nameInput = new TextComponent(topRowContainer)
+			nameInput.setPlaceholder('Action Name (e.g., Summarize)')
+				.setValue(action.name)
+				.onChange(async (value) => {
+					this.plugin.settings.contextMenuActions[index].name = value
+					await this.plugin.saveSettings()
+				})
+			nameInput.inputEl.style.flexGrow = '1'       // Allow input to expand
+			nameInput.inputEl.style.marginRight = '8px'  // Space between input and button
+
+			// Delete Button Component (added to topRowContainer)
+			const deleteButton = new ButtonComponent(topRowContainer)
+			deleteButton.setIcon('trash')
+				.setTooltip('Delete Action')
+				.setWarning() // Indicate destructive action
+				.onClick(async () => {
+					this.plugin.settings.contextMenuActions.splice(index, 1)
+					await this.plugin.saveSettings()
+					this.display() // Re-render the settings tab
+				})
+
+			// Prompt Text Area Component (added directly to controlEl, below topRowContainer)
+			const promptArea = new TextAreaComponent(setting.controlEl)
+			promptArea.inputEl.rows = 3
+			promptArea.inputEl.style.width = '100%' // Use full width
+			promptArea.setPlaceholder('Action Prompt (e.g., Provide a concise summary...)')
+				.setValue(action.prompt)
+				.onChange(async (value) => {
+					this.plugin.settings.contextMenuActions[index].prompt = value
+					await this.plugin.saveSettings()
+				})
+
+			// --- End Manual DOM Manipulation ---
+
+			// Add a class to the main setting element for styling separation between actions
+			setting.settingEl.addClass('chat-stream-action-item')
+			// Add a top border for visual separation between action items, except for the first one
+			if (index > 0) {
+				setting.settingEl.style.borderTop = '1px solid var(--background-modifier-border)'
+				setting.settingEl.style.paddingTop = '10px' // Add some padding above the border
+			}
+			// Remove default name/desc elements as we are not using .setName() or .setDesc()
+			setting.nameEl.remove()
+			setting.descEl.remove()
+		})
+
+		// Add Action Button
+		new Setting(containerEl)
+			.addButton(button => button
+				.setButtonText('Add Action')
+				.setCta() // Make it stand out as a primary action
+				.onClick(async () => {
+					// Ensure the array exists before pushing
+					if (!Array.isArray(this.plugin.settings.contextMenuActions)) {
+						this.plugin.settings.contextMenuActions = []
+					}
+					this.plugin.settings.contextMenuActions.push({ name: '', prompt: '' })
+					await this.plugin.saveSettings()
+					this.display() // Re-render to show the new action fields
+				}))
+
+		// --- End Context Menu Actions Section ---
+
 
 		// Now that all elements are created, attempt initial model population
 		await this.updateModelDropdownAndApiKeyStatus()
