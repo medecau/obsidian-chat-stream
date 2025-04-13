@@ -1,4 +1,4 @@
-import { Plugin, App, PluginManifest } from 'obsidian'
+import { Plugin, App, PluginManifest, Menu } from 'obsidian' // Added Menu
 import {
 	ChatStreamSettings,
 	DEFAULT_SETTINGS
@@ -6,6 +6,12 @@ import {
 import SettingsTab from './settings/SettingsTab'
 import { Logger } from './util/logging'
 import { noteGenerator } from './noteGenerator'
+import { CanvasNode } from './obsidian/canvas-internal' // Added CanvasNode
+
+// Helper function for small delays
+async function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 /**
  * Obsidian plugin implementation.
@@ -15,7 +21,7 @@ export class ChatStreamPlugin extends Plugin {
 	settings: ChatStreamSettings
 	logDebug: Logger
 
-	constructor(app: App, pluginManifest: PluginManifest, pluginPath: string) {
+	constructor(app: App, pluginManifest: PluginManifest) { // Removed pluginPath as it's unused
 		super(app, pluginManifest)
 	}
 
@@ -62,6 +68,36 @@ export class ChatStreamPlugin extends Plugin {
 				}
 			]
 		})
+
+		// Add context menu item for Canvas notes
+		this.registerEvent(
+			this.app.workspace.on('canvas:node-menu', (menu: Menu, node: CanvasNode) => {
+				// Ensure we have a node and its associated canvas
+				if (node && node.canvas) {
+					// Optional: Check if it's a text node if needed later
+					// const nodeData = node.getData();
+					// if (nodeData.type === 'text' || nodeData.type === 'file') { ... }
+
+					menu.addItem((item) => {
+						item
+							.setTitle('ChatStream: Generate Content')
+							.setIcon('lucide-sparkles') // Or 'brain-circuit', 'bot', etc.
+							.onClick(async () => {
+								const canvas = node.canvas
+								this.logDebug('Context menu item clicked for node:', node.id)
+
+								// generateNote uses the current selection, so select the target node first
+								canvas.selectOnly(node, false) // Select the node, don't start editing
+								await canvas.requestSave() // Allow selection to register
+								await sleep(50) // Brief pause before triggering generation
+
+								// Call the existing function to generate the note
+								generator.generateNote()
+							})
+					})
+				}
+			})
+		)
 	}
 
 	async loadSettings() {
