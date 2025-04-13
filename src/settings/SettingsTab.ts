@@ -10,7 +10,7 @@ export class SettingsTab extends PluginSettingTab {
 		this.plugin = plugin
 	}
 
-	display(): void {
+	async display(): Promise<void> {
 		const { containerEl } = this
 
 		containerEl.empty()
@@ -18,8 +18,9 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Model')
 			.setDesc('Select the GPT model to use.')
-			.addDropdown((cb) => {
-				getModels().forEach((model) => {
+			.addDropdown(async (cb) => {
+				const models = await getModels(this.plugin.settings.apiUrl, this.plugin.settings.apiKey)
+				models.forEach((model) => {
 					cb.addOption(model, model)
 				})
 				cb.setValue(this.plugin.settings.apiModel)

@@ -67,6 +67,22 @@ export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	maxDepth: 0
 }
 
-export function getModels() {
-	return Object.entries(CHAT_MODELS).map(([, value]) => value.name)
+export async function fetchModels(apiUrl: string, apiKey: string): Promise<string[]> {
+	const headers = {
+		Authorization: `Bearer ${apiKey}`,
+		'Content-Type': 'application/json'
+	}
+	const response = await fetch(`${apiUrl}/models`, { headers })
+	const data = await response.json()
+	return data.data.map((model: { id: string }) => model.id)
+}
+
+export async function getModels(apiUrl: string, apiKey: string): Promise<string[]> {
+	try {
+		const models = await fetchModels(apiUrl, apiKey)
+		return models
+	} catch (error) {
+		console.error('Error fetching models:', error)
+		return Object.entries(CHAT_MODELS).map(([, value]) => value.name)
+	}
 }
