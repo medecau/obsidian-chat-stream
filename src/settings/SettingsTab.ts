@@ -1,49 +1,131 @@
-import { App, PluginSettingTab, Setting } from 'obsidian'
+import { App, PluginSettingTab, Setting, DropdownComponent, TextComponent } from 'obsidian'
 import { ChatStreamPlugin } from 'src/ChatStreamPlugin'
 import { getModels } from './ChatStreamSettings'
+// Default models are no longer imported from chatGPT.ts
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: ChatStreamPlugin
+	private modelDropdown: DropdownComponent | null = null;
+	private apiKeyInput: TextComponent | null = null;
+	private apiKeyValid: boolean = false; // Track API key validity
 
 	constructor(app: App, plugin: ChatStreamPlugin) {
 		super(app, plugin)
 		this.plugin = plugin
 	}
 
+	// Helper function to fetch models and update UI
+	private async updateModelDropdownAndApiKeyStatus(): Promise<void> {
+
+		if (!this.modelDropdown || !this.apiKeyInput) {
+			return
+		}
+
+		const { apiKey, apiUrl } = this.plugin.settings
+
+		// Disable dropdown and clear options initially
+		this.modelDropdown.setDisabled(true)
+		this.modelDropdown.selectEl.empty() // Clear existing options
+		this.modelDropdown.addOption('', 'Enter API Key first') // Placeholder
+
+		// Reset API key border
+		this.apiKeyInput.inputEl.style.borderColor = ''
+		this.apiKeyValid = false
+
+		if (apiKey && apiUrl) {
+			try {
+				// Use the base API URL for fetching models
+				const modelsApiUrl = apiUrl.endsWith('/chat/completions')
+					? apiUrl.replace('/chat/completions', '')
+					: apiUrl
+
+				const models = await getModels(modelsApiUrl, apiKey)
+				// Filter models based on specified patterns
+				const filteredModels = models.filter(model => (/^gpt-|^o\d/.test(model)) && (!/-\d{4}-\d{2}-\d{2}$/.test(model)))
+				// Sort filtered models alphabetically
+				filteredModels.sort()
+				// Clear placeholder/error message
+				this.modelDropdown.selectEl.empty()
+				// Add fetched models
+				filteredModels.forEach((model) => {
+					this.modelDropdown?.addOption(model, model)
+				})
+				// Set current value and enable
+				this.modelDropdown.setValue(this.plugin.settings.apiModel)
+				this.modelDropdown.setDisabled(false)
+				this.apiKeyValid = true
+				this.apiKeyInput.inputEl.style.borderColor = '' // Clear red border on success
+				console.log("API Key validated and models fetched successfully.")
+			} catch (error) {
+				console.error("Failed to fetch models:", error)
+				// Keep dropdown disabled, show error message
+				this.modelDropdown.selectEl.empty()
+				this.modelDropdown.addOption('', 'Invalid API Key or URL')
+				this.modelDropdown.setDisabled(true)
+				// Indicate API key is invalid
+				this.apiKeyInput.inputEl.style.borderColor = 'red'
+				this.apiKeyValid = false
+
+				// Fallback: If fetching models failed, reset to a known default model
+				// to prevent saving an invalid state.
+				console.log("Resetting model to default due to fetch failure.")
+				this.plugin.settings.apiModel = 'gpt-3.5-turbo' // Reset to hardcoded default
+				await this.plugin.saveSettings()
+				this.modelDropdown.setValue(this.plugin.settings.apiModel) // Show the (potentially reset) model
+			}
+		} else {
+			// If no API key, ensure dropdown is disabled and shows placeholder
+			this.modelDropdown.selectEl.empty()
+			this.modelDropdown.addOption('', 'Enter API Key first')
+			this.modelDropdown.setDisabled(true)
+		}
+	}
+
+
 	async display(): Promise<void> {
 		const { containerEl } = this
-
 		containerEl.empty()
 
+		// Model Dropdown Setting
 		new Setting(containerEl)
 			.setName('Model')
-			.setDesc('Select the GPT model to use.')
+			.setDesc('Select the GPT model to use (requires valid API Key).')
 			.addDropdown(async (cb) => {
-				const models = await getModels(this.plugin.settings.apiUrl, this.plugin.settings.apiKey)
-				models.forEach((model) => {
-					cb.addOption(model, model)
-				})
-				cb.setValue(this.plugin.settings.apiModel)
+				this.modelDropdown = cb // Store reference
+				cb.setDisabled(true) // Initially disabled
+				cb.addOption('', 'Enter API Key first') // Initial placeholder
+				cb.setValue(this.plugin.settings.apiModel) // Set initial value (might be default)
 				cb.onChange(async (value) => {
-					this.plugin.settings.apiModel = value
-					await this.plugin.saveSettings()
+					if (this.apiKeyValid) { // Only save if the key was valid when models were fetched
+						this.plugin.settings.apiModel = value
+						await this.plugin.saveSettings()
+					}
 				})
+				// Initial population will happen after all elements are created
 			})
 
+		// API Key Setting
 		new Setting(containerEl)
 			.setName('API key')
 			.setDesc('The API key to use when making requests - Get from OpenAI')
 			.addText((text) => {
+				this.apiKeyInput = text // Store reference
 				text.inputEl.type = 'password'
 				text
 					.setPlaceholder('API Key')
 					.setValue(this.plugin.settings.apiKey)
 					.onChange(async (value) => {
+						const changed = this.plugin.settings.apiKey !== value
 						this.plugin.settings.apiKey = value
 						await this.plugin.saveSettings()
+						// Re-validate and update models if key changed
+						if (changed) {
+							await this.updateModelDropdownAndApiKeyStatus()
+						}
 					})
 			})
 
+		// System Prompt Setting
 		new Setting(containerEl)
 			.setName('System prompt')
 			.setDesc(
@@ -60,6 +142,7 @@ export class SettingsTab extends PluginSettingTab {
 				})
 			})
 
+		// Max Input Tokens Setting
 		new Setting(containerEl)
 			.setName('Max input tokens')
 			.setDesc(
@@ -77,6 +160,7 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			)
 
+		// Max Response Tokens Setting
 		new Setting(containerEl)
 			.setName('Max response tokens')
 			.setDesc(
@@ -94,6 +178,7 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			)
 
+		// Max Depth Setting
 		new Setting(containerEl)
 			.setName('Max depth')
 			.setDesc(
@@ -111,6 +196,7 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			)
 
+		// Temperature Setting
 		new Setting(containerEl)
 			.setName('Temperature')
 			.setDesc('Sampling temperature (0-2). 0 means no randomness.')
@@ -126,22 +212,38 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			)
 
+		// API URL Setting
 		new Setting(containerEl)
 			.setName('API URL')
 			.setDesc(
-				"The chat completions URL to use. You probably won't need to change this."
+				"The base URL for the API (e.g., https://api.openai.com/v1). The correct endpoints like '/models' and '/chat/completions' will be appended automatically where needed."
 			)
 			.addText((text) => {
 				text.inputEl.style.width = '300px'
 				text
-					.setPlaceholder('API URL')
+					.setPlaceholder('API Base URL')
 					.setValue(this.plugin.settings.apiUrl)
 					.onChange(async (value) => {
-						this.plugin.settings.apiUrl = value
-						await this.plugin.saveSettings()
+						// Basic validation: ensure it's not empty and looks like a URL start
+						const trimmedValue = value.trim().replace(/\/+$/, '') // Remove trailing slashes
+						const changed = this.plugin.settings.apiUrl !== trimmedValue
+
+						if (trimmedValue && (trimmedValue.startsWith('http://') || trimmedValue.startsWith('https://'))) {
+							this.plugin.settings.apiUrl = trimmedValue
+							await this.plugin.saveSettings()
+							// Re-validate and update models if URL changed
+							if (changed) {
+								await this.updateModelDropdownAndApiKeyStatus()
+							}
+						} else {
+							// Optionally provide feedback or prevent saving invalid URL
+							console.warn("Invalid API URL format entered.")
+							// Maybe reset to previous value or show error? For now, just log.
+						}
 					})
 			})
 
+		// Debug Output Setting
 		new Setting(containerEl)
 			.setName('Debug output')
 			.setDesc('Enable debug output in the console')
@@ -153,6 +255,9 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings()
 					})
 			})
+
+		// Now that all elements are created, attempt initial model population
+		await this.updateModelDropdownAndApiKeyStatus()
 	}
 }
 

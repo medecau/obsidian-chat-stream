@@ -22,10 +22,12 @@ export class ChatStreamPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings()
 
+
+
 		this.logDebug = this.settings.debug
 			? (message?: unknown, ...optionalParams: unknown[]) =>
-					console.debug('Chat Stream: ' + message, ...optionalParams)
-			: () => {}
+				console.debug('Chat Stream: ' + message, ...optionalParams)
+			: () => { }
 
 		this.logDebug('Debug logging enabled')
 

@@ -3,10 +3,10 @@ import { App, ItemView, Notice } from 'obsidian'
 import { CanvasNode } from './obsidian/canvas-internal'
 import { CanvasView, calcHeight, createNode } from './obsidian/canvas-patches'
 import {
-	CHAT_MODELS,
-	ChatGPTModel,
-	chatModelByName,
-	ChatModelSettings,
+	// CHAT_MODELS, // Removed
+	// ChatGPTModel, // Assuming this was related and also removed/unused
+	// chatModelByName, // Removed
+	ChatModelSettings, // Keep if still used elsewhere or needed for types
 	getChatGPTCompletion
 } from './openai/chatGPT'
 import { openai } from './openai/chatGPT-types'
@@ -287,15 +287,27 @@ export function noteGenerator(
 }
 
 function getEncoding(settings: ChatStreamSettings) {
-	const model: ChatModelSettings | undefined = chatModelByName(settings.apiModel)
-	return encodingForModel(
-		(model?.encodingFrom || model?.name || DEFAULT_SETTINGS.apiModel) as TiktokenModel
-	)
+	// Since chatModelByName is removed, we rely directly on the model name
+	// or the default. We lose the ability to use a different 'encodingFrom' model.
+	const modelName = settings.apiModel || DEFAULT_SETTINGS.apiModel
+	try {
+		return encodingForModel(modelName as TiktokenModel)
+	} catch (e) {
+		console.warn(`Could not get encoding for model ${modelName}, falling back to gpt-3.5-turbo`, e)
+		// Fallback to a common encoding if the specific model name isn't recognized by tiktoken
+		return encodingForModel('gpt-3.5-turbo')
+	}
 }
 
-function getTokenLimit(settings: ChatStreamSettings) {
-	const model = chatModelByName(settings.apiModel) || CHAT_MODELS.GPT_35_TURBO_0125
-	return settings.maxInputTokens
-		? Math.min(settings.maxInputTokens, model.tokenLimit)
-		: model.tokenLimit
+function getTokenLimit(settings: ChatStreamSettings): number {
+	// Since chatModelByName and CHAT_MODELS are removed, we cannot dynamically get the model's token limit.
+	// Use the user-defined maxInputTokens if set, otherwise use a reasonable default.
+	const defaultLimit = 8192 // A common default limit
+	if (settings.maxInputTokens && settings.maxInputTokens > 0) {
+		// If user set a limit, respect it (assuming it's less than the actual model limit)
+		return settings.maxInputTokens
+	} else {
+		// If user set to 0 (or invalid), use the default limit.
+		return defaultLimit
+	}
 }

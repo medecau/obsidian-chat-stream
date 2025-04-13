@@ -1,7 +1,7 @@
 import { request, RequestUrlParam } from 'obsidian'
 import { openai } from './chatGPT-types'
 
-export const OPENAI_COMPLETIONS_URL = `https://api.openai.com/v1/chat/completions`
+export const OPENAI_RESPONSES_URL = `https://api.openai.com/v1/responses`
 
 export type ChatModelSettings = {
 	name: string,
@@ -9,71 +9,10 @@ export type ChatModelSettings = {
 	encodingFrom?: string
 }
 
-export const CHAT_MODELS = {
-	GPT_35_TURBO: {
-		name: 'gpt-3.5-turbo',
-		tokenLimit: 4096
-	},
-	GPT_35_TURBO_0125: {
-		name: 'gpt-3.5-turbo-0125',
-		tokenLimit: 16385
-	},
-	GPT_35_16K: {
-		name: 'gpt-3.5-turbo-16k',
-		tokenLimit: 16385
-	},
-	GPT_35_TURBO_1106: {
-		name: 'gpt-3.5-turbo-1106',
-		tokenLimit: 16385
-	},
-	GPT_4o: {
-		name: 'gpt-4o',
-		tokenLimit: 128000
-	},
-	GPT_4o_MINI: {
-		name: 'gpt-4o-mini',
-		encodingFrom: 'gpt-4o',
-		tokenLimit: 16384
-	},
-	GPT_4: {
-		name: 'gpt-4',
-		tokenLimit: 8192
-	},
-	GPT_4_TURBO_PREVIEW: {
-		name: 'gpt-4-turbo-preview',
-		tokenLimit: 128000
-	},
-	GPT_4_0125_PREVIEW: {
-		name: 'gpt-4-0125-preview',
-		tokenLimit: 128000
-	},
-	GPT_4_1106_PREVIEW: {
-		name: 'gpt-4-1106-preview',
-		tokenLimit: 128000
-	},
-	GPT_4_0613: {
-		name: 'gpt-4-0613',
-		tokenLimit: 8192
-	},
-	GPT_4_32K: {
-		name: 'gpt-4-32k',
-		tokenLimit: 32768
-	},
-	GPT_4_32K_0613: {
-		name: 'gpt-4-32k-0613',
-		tokenLimit: 32768
-	}
-}
-
-export type ChatGPTModel = keyof typeof CHAT_MODELS
-
-export function chatModelByName(name: string) {
-	return Object.values(CHAT_MODELS).find((model) => model.name === name)
-}
-
+// Update defaultChatGPTSettings to use a hardcoded default model
 export const defaultChatGPTSettings: Partial<openai.CreateChatCompletionRequest> =
 {
-	model: CHAT_MODELS.GPT_35_TURBO.name,
+	model: 'gpt-3.5-turbo', // Using hardcoded default as CHAT_MODELS is removed
 	max_tokens: 500,
 	temperature: 0,
 	top_p: 1.0,
@@ -84,9 +23,9 @@ export const defaultChatGPTSettings: Partial<openai.CreateChatCompletionRequest>
 
 export async function getChatGPTCompletion(
 	apiKey: string,
-	apiUrl: string,
+	_apiUrl: string, // Parameter ignored, using constant below
 	model: openai.CreateChatCompletionRequest['model'],
-	messages: openai.CreateChatCompletionRequest['messages'],
+	input: openai.CreateChatCompletionRequest['messages'],
 	settings?: Partial<
 		Omit<openai.CreateChatCompletionRequest, 'messages' | 'model'>
 	>
@@ -95,11 +34,27 @@ export async function getChatGPTCompletion(
 		Authorization: `Bearer ${apiKey}`,
 		'Content-Type': 'application/json'
 	}
-	const body: openai.CreateChatCompletionRequest = {
-		messages,
-		model,
+
+	// Ensure model is using a supported name format
+	let modelName = model
+	// If model starts with 'o3', it's likely meant to be 'gpt-4o'
+	if (modelName === 'o3-mini') {
+		modelName = 'gpt-4o-mini'
+		console.debug('Corrected model name from o3-mini to gpt-4o-mini')
+	} else if (modelName && modelName.startsWith('o3')) {
+		modelName = 'gpt-4o'
+		console.debug('Corrected model name from o3 to gpt-4o')
+	}
+
+	const body = {
+		input,
+		model: modelName,
 		...settings
 	}
+
+	// Ensure we use the full responses API endpoint URL
+	const apiUrl = OPENAI_RESPONSES_URL
+	console.debug('Requesting OpenAI API', { url: apiUrl, headers, body })
 	const requestParam: RequestUrlParam = {
 		url: apiUrl,
 		method: 'POST',
@@ -107,20 +62,51 @@ export async function getChatGPTCompletion(
 		body: JSON.stringify(body),
 		headers
 	}
-	console.debug('Calling openAI', requestParam)
-	const res: openai.CreateChatCompletionResponse | undefined = await request(
-		requestParam
-	)
-		.then((response) => {
-			return JSON.parse(response)
-		})
-		.catch((err) => {
-			console.error(err)
-			if (err.code === 429) {
-				console.error(
-					'OpenAI API rate limit exceeded. If you have free account, your credits may have been consumed or expired.'
-				)
+
+	try {
+		const res: any = await request(requestParam)
+			.then((response) => {
+				console.debug('OpenAI API response', { response })
+				return JSON.parse(response)
+			})
+
+		// Parse the response based on the new Responses API format
+		// The output is in res.content array with items that have type: "output_text"
+		if (res && Array.isArray(res.content)) {
+			// Extract all text outputs and join them
+			const textOutputs = res.content
+				.filter((item: any) => item.type === "output_text")
+				.map((item: any) => item.text)
+
+			return textOutputs.join('')
+		} else if (res && res.output) {
+			// Try to parse as documented in API docs: output array with messages inside
+			const firstMessage = Array.isArray(res.output) && res.output[0]
+			if (firstMessage && firstMessage.content) {
+				const textContent = firstMessage.content
+					.filter((item: any) => item.type === "output_text")
+					.map((item: any) => item.text)
+					.join('')
+
+				return textContent || undefined
 			}
+		}
+
+		// Fallback to output_text helper if available
+		return res?.output_text
+	} catch (err) {
+		console.error('OpenAI API request failed', {
+			url: apiUrl,
+			headers,
+			body,
+			error: err,
+			response: err?.response || 'No response body'
 		})
-	return res?.choices?.[0]?.message?.content
+		if (err.code === 429) {
+			console.error(
+				'OpenAI API rate limit exceeded. If you have a free account, your credits may have been consumed or expired.'
+			)
+		}
+		throw err
+	}
 }

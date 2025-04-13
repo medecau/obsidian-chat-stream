@@ -1,4 +1,4 @@
-import { CHAT_MODELS, OPENAI_COMPLETIONS_URL } from 'src/openai/chatGPT'
+import { OPENAI_RESPONSES_URL } from 'src/openai/chatGPT'
 
 export interface ChatStreamSettings {
 	/**
@@ -57,8 +57,8 @@ Use step-by-step reasoning. Be brief.
 
 export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	apiKey: '',
-	apiUrl: OPENAI_COMPLETIONS_URL,
-	apiModel: CHAT_MODELS.GPT_35_TURBO.name,
+	apiUrl: OPENAI_RESPONSES_URL,
+	apiModel: 'gpt-3.5-turbo', // Use hardcoded default as CHAT_MODELS is removed
 	temperature: 1,
 	systemPrompt: DEFAULT_SYSTEM_PROMPT,
 	debug: false,
@@ -79,10 +79,10 @@ export async function fetchModels(apiUrl: string, apiKey: string): Promise<strin
 
 export async function getModels(apiUrl: string, apiKey: string): Promise<string[]> {
 	try {
-		const models = await fetchModels(apiUrl, apiKey)
-		return models
+		return await fetchModels(apiUrl, apiKey)
 	} catch (error) {
 		console.error('Error fetching models:', error)
-		return Object.entries(CHAT_MODELS).map(([, value]) => value.name)
+		// Re-throw the error to allow the caller to handle UI feedback
+		throw error
 	}
 }
