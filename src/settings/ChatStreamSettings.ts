@@ -6,6 +6,12 @@ export interface ChatStreamAction {
 	prompt?: string
 }
 
+export interface ChatStreamCustomAction {
+	slug: string
+	name: string
+	// Add other properties as needed
+}
+
 
 export interface ChatStreamSettings {
 	/**
@@ -52,12 +58,17 @@ export interface ChatStreamSettings {
 	 * The maximum depth of ancestor notes to include. 0 means no limit.
 	 */
 	maxDepth: number
+
 	/**
 	 * Unified actions available in the context menu.
 	 * These can be either prompt actions or command actions.
 	 */
 	actions: ChatStreamAction[]
 
+	/**
+	 * User-defined custom actions for note connections.
+	 */
+	customActions: ChatStreamCustomAction[]
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `
@@ -78,7 +89,8 @@ export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	maxInputTokens: 0,
 	maxResponseTokens: 0,
 	maxDepth: 0,
-	actions: []
+	actions: [],
+	customActions: []
 }
 
 export async function fetchModels(apiUrl: string, apiKey: string): Promise<string[]> {

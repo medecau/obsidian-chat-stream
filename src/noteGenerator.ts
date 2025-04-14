@@ -1,7 +1,7 @@
 import { TiktokenModel, encodingForModel } from 'js-tiktoken'
 import { App, ItemView, Notice } from 'obsidian'
 import { CanvasNode } from './obsidian/canvas-internal'
-import { CanvasView, calcHeight, createNode } from './obsidian/canvas-patches'
+import { CanvasView, calcHeight, createNode, addEdge } from './obsidian/canvas-patches'
 import {
 	// CHAT_MODELS, // Removed
 	// ChatGPTModel, // Assuming this was related and also removed/unused
@@ -12,7 +12,7 @@ import {
 import { openai } from './openai/chatGPT-types'
 import {
 	ChatStreamSettings,
-	DEFAULT_SETTINGS
+	DEFAULT_SETTINGS,
 } from './settings/ChatStreamSettings'
 import { Logger } from './util/logging'
 import { visitNodeAndAncestors } from './obsidian/canvasUtil'
@@ -207,7 +207,11 @@ export function noteGenerator(
 		}
 	}
 
-	const generateNote = async (actionPrompt?: string) => {
+	const generateNote = async (
+		action: any, // Replace 'any' with 'ChatStreamAction' if type is available in imports
+		actionPrompt?: string,
+		explicitLabel?: string
+	) => {
 		if (!canCallAI()) {
 			return
 		}
@@ -287,6 +291,24 @@ export function noteGenerator(
 					x: created.x,
 					y: created.y
 				})
+
+				// Connect the source note to the output note with a labeled edge
+				const label = explicitLabel || action.name
+				addEdge(
+					canvas,
+					crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2),
+					{
+						fromOrTo: 'from',
+						side: 'bottom',
+						node: node
+					},
+					{
+						fromOrTo: 'to',
+						side: 'top',
+						node: created
+					},
+					label
+				)
 
 				const selectedNoteId =
 					canvas.selection?.size === 1

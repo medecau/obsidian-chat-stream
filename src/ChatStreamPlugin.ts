@@ -58,7 +58,9 @@ export class ChatStreamPlugin extends Plugin {
 			id: 'generate-note',
 			name: 'Generate AI note',
 			callback: () => {
-				generator.generateNote()
+				if (this.settings.actions && this.settings.actions.length > 0) {
+					generator.generateNote(this.settings.actions[0])
+				}
 			},
 			hotkeys: [
 				{
@@ -92,7 +94,9 @@ export class ChatStreamPlugin extends Plugin {
 								await sleep(50) // Brief pause before triggering generation
 
 								// Call the existing function to generate the note
-								generator.generateNote()
+								if (this.settings.actions && this.settings.actions.length > 0) {
+									generator.generateNote(this.settings.actions[0])
+								}
 							})
 					})
 
@@ -113,7 +117,7 @@ export class ChatStreamPlugin extends Plugin {
 												await canvas.requestSave() // Allow selection to register
 												await sleep(50) // Brief pause before triggering generation
 
-												generator.generateNote(action.prompt)
+												generator.generateNote(action, action.prompt)
 											}
 										})
 								})

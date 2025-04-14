@@ -55,7 +55,7 @@ const minHeight = 60
 export const calcHeight = (options: { parentHeight: number; text: string }) => {
 	const calcTextHeight = Math.round(
 		textPaddingHeight +
-			(pxPerLine * options.text.length) / (minWidth / pxPerChar)
+		(pxPerLine * options.text.length) / (minWidth / pxPerChar)
 	)
 	return Math.max(options.parentHeight, calcTextHeight)
 }
@@ -95,9 +95,9 @@ export const createNode = (
 	const farLeft = parentNode.y - parentNode.width * 5
 	const siblingsRight = siblings?.length
 		? siblings.reduce(
-				(right, sib) => Math.max(right, sib.x + sib.width),
-				farLeft
-		  )
+			(right, sib) => Math.max(right, sib.x + sib.width),
+			farLeft
+		)
 		: undefined
 	const priorSibling = siblings[siblings.length - 1]
 
@@ -152,17 +152,17 @@ export const addEdge = (
 	canvas: Canvas,
 	edgeID: string,
 	fromEdge: CanvasEdgeIntermediate,
-	toEdge: CanvasEdgeIntermediate
+	toEdge: CanvasEdgeIntermediate,
+	label?: string
 ) => {
 	if (!canvas) {
-   return
- }
-
+		return
+	}
 	const data = canvas.getData()
 
 	if (!data) {
-   return
- }
+		return
+	}
 
 	canvas.importData({
 		edges: [
@@ -172,7 +172,8 @@ export const addEdge = (
 				fromNode: fromEdge.node.id,
 				fromSide: fromEdge.side,
 				toNode: toEdge.node.id,
-				toSide: toEdge.side
+				toSide: toEdge.side,
+				...(label ? { label } : {})
 			}
 		],
 		nodes: data.nodes
