@@ -1,15 +1,11 @@
 import { OPENAI_RESPONSES_URL } from 'src/openai/chatGPT'
 
 export interface ChatStreamAction {
+	id: string
 	name: string
-	prompt: string
+	prompt?: string
 }
 
-export interface CustomAction {
-	id: string
-	label: string
-	command: string
-}
 
 export interface ChatStreamSettings {
 	/**
@@ -57,13 +53,11 @@ export interface ChatStreamSettings {
 	 */
 	maxDepth: number
 	/**
-	 * Custom triggers available in the context menu.
+	 * Unified actions available in the context menu.
+	 * These can be either prompt actions or command actions.
 	 */
-	contextMenuActions: ChatStreamAction[]
-	/**
-	 * Custom actions defined by the user to appear in the context menu.
-	 */
-	customActions: CustomAction[]
+	actions: ChatStreamAction[]
+
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `
@@ -84,8 +78,7 @@ export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	maxInputTokens: 0,
 	maxResponseTokens: 0,
 	maxDepth: 0,
-	contextMenuActions: [],
-	customActions: []
+	actions: []
 }
 
 export async function fetchModels(apiUrl: string, apiKey: string): Promise<string[]> {

@@ -96,24 +96,19 @@ export class ChatStreamPlugin extends Plugin {
 							})
 					})
 
-					// Add custom actions from settings, check if array exists
-					if (this.settings.customActions && Array.isArray(this.settings.customActions)) {
-						this.settings.customActions.forEach(action => {
-							if (action.id && action.label && action.command) { // Basic validation
+					// Add prompt actions from settings
+					if (this.settings.actions && Array.isArray(this.settings.actions)) {
+						this.settings.actions.forEach(action => {
+							if (action.id && action.name) {
 								menu.addItem((item) => {
 									item
-										.setTitle(action.label)
-										.setIcon('lucide-run') // Example icon, adjust as needed
+										.setTitle(action.name)
+										.setIcon('lucide-wand')
 										.onClick(async () => {
-											this.logDebug(`Executing custom action command: ${action.command} for node: ${node.id}`)
-											try {
-												// Use node context if needed by the command in the future, for now just execute
-												// Use type assertion to bypass potential App type definition issue
-												await (this.app as any).commands.executeCommandById(action.command)
-											} catch (error) {
-												console.error(`Error executing command '${action.command}':`, error)
-												// Optionally notify the user via Obsidian's notice system
-												// new Notice(`Failed to execute action: ${action.label}`);
+											if (action.prompt) {
+												this.logDebug(`Executing canvas prompt action with prompt: ${action.prompt}`)
+												// For canvas nodes, no editor is available. Trigger note generation.
+												generator.generateNote()
 											}
 										})
 								})
@@ -121,23 +116,7 @@ export class ChatStreamPlugin extends Plugin {
 						})
 					}
 
-					// Also add canvas actions from settings.contextMenuActions if defined
-					if (this.settings.contextMenuActions && Array.isArray(this.settings.contextMenuActions)) {
-						this.settings.contextMenuActions.forEach(action => {
-							if (action.name && action.prompt) {
-								menu.addItem((item) => {
-									item
-										.setTitle(action.name)
-										.setIcon('lucide-wand')
-										.onClick(async () => {
-											this.logDebug(`Executing canvas context menu action with prompt: ${action.prompt}`)
-											// For canvas nodes, no editor is available. Trigger note generation.
-											generator.generateNote()
-										})
-								})
-							}
-						})
-					}
+
 				}
 			})
 		)
@@ -145,27 +124,24 @@ export class ChatStreamPlugin extends Plugin {
 		// Add context menu items for editor based on dynamic triggers
 		this.registerEvent(
 			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
-				// Retrieve the current actions *inside* the callback to ensure freshness
-				const currentActions = this.settings.contextMenuActions
+				// Add unified actions
+				const unifiedActions = this.settings.actions || []
 
-				if (!currentActions || currentActions.length === 0) {
-					return // No actions defined in settings
+				// If no actions defined, return early
+				if (unifiedActions.length === 0) {
+					return
 				}
 
-				// Iterate over the *current* actions retrieved above
-				currentActions.forEach(action => {
-					// Ensure the action has both a name and a prompt to be valid
+				// Add prompt actions
+				unifiedActions.forEach(action => {
 					if (action.name && action.prompt) {
 						menu.addItem((item) => {
 							item
-								.setTitle(action.name) // Use the action's name for the menu item
-								.setIcon('lucide-wand') // Keep the icon (or adjust if needed)
+								.setTitle(action.name)
+								.setIcon('lucide-wand')
 								.onClick(async () => {
-									// Get the editor content at the moment the item is clicked
 									const currentContent = editor.getValue()
-									// Prepend the action's prompt and a newline
 									const newContent = `${action.prompt}\n${currentContent}`
-									// Update the editor with the new content
 									editor.setValue(newContent)
 								})
 						})
@@ -176,7 +152,10 @@ export class ChatStreamPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+		const loadedData = await this.loadData()
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData)
+
+		await this.saveSettings()
 	}
 
 	async saveSettings() {

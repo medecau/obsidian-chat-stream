@@ -256,23 +256,24 @@ export class SettingsTab extends PluginSettingTab {
 					})
 			})
 
-		// --- Context Menu Triggers Section ---
+		// --- Unified Actions Section ---
 		new Setting(containerEl)
-			.setName('Context Menu Actions')
+			.setName('Actions')
+			.setDesc('Configure actions that appear in the context menu')
 			.setHeading()
 
-		// Ensure contextMenuTriggers exists and is an array
-		if (!Array.isArray(this.plugin.settings.contextMenuActions)) {
-			this.plugin.settings.contextMenuActions = []
+		// Ensure actions exists and is an array
+		if (!Array.isArray(this.plugin.settings.actions)) {
+			this.plugin.settings.actions = []
 			await this.plugin.saveSettings()
 		}
 
-		this.plugin.settings.contextMenuActions.forEach((action, index) => {
+		this.plugin.settings.actions.forEach((action, index) => {
 			const setting = new Setting(containerEl) // Create the single setting container
 
 			// --- Manual DOM Manipulation within setting.controlEl ---
 
-			// Container for the top row (name input + delete button)
+			// Container for the top row (name input + type dropdown + delete button)
 			const topRowContainer = setting.controlEl.createDiv({ cls: 'chat-stream-action-top-row' })
 			topRowContainer.style.display = 'flex'        // Use flexbox for horizontal layout
 			topRowContainer.style.alignItems = 'center'   // Vertically align items in the row
@@ -280,14 +281,14 @@ export class SettingsTab extends PluginSettingTab {
 
 			// Name Input Component (added to topRowContainer)
 			const nameInput = new TextComponent(topRowContainer)
-			nameInput.setPlaceholder('Action Name (e.g., Summarize)')
+			nameInput.setPlaceholder('Action Name')
 				.setValue(action.name)
 				.onChange(async (value) => {
-					this.plugin.settings.contextMenuActions[index].name = value
+					this.plugin.settings.actions[index].name = value
 					await this.plugin.saveSettings()
 				})
 			nameInput.inputEl.style.flexGrow = '1'       // Allow input to expand
-			nameInput.inputEl.style.marginRight = '8px'  // Space between input and button
+			nameInput.inputEl.style.marginRight = '8px'  // Space between input and dropdown
 
 			// Delete Button Component (added to topRowContainer)
 			const deleteButton = new ButtonComponent(topRowContainer)
@@ -295,19 +296,19 @@ export class SettingsTab extends PluginSettingTab {
 				.setTooltip('Delete Action')
 				.setWarning() // Indicate destructive action
 				.onClick(async () => {
-					this.plugin.settings.contextMenuActions.splice(index, 1)
+					this.plugin.settings.actions.splice(index, 1)
 					await this.plugin.saveSettings()
 					this.display() // Re-render the settings tab
 				})
 
-			// Prompt Text Area Component (added directly to controlEl, below topRowContainer)
+			// Prompt Text Area Component for prompt actions
 			const promptArea = new TextAreaComponent(setting.controlEl)
 			promptArea.inputEl.rows = 3
 			promptArea.inputEl.style.width = '100%' // Use full width
 			promptArea.setPlaceholder('Action Prompt (e.g., Provide a concise summary...)')
-				.setValue(action.prompt)
+				.setValue(action.prompt || '')
 				.onChange(async (value) => {
-					this.plugin.settings.contextMenuActions[index].prompt = value
+					this.plugin.settings.actions[index].prompt = value
 					await this.plugin.saveSettings()
 				})
 
@@ -331,16 +332,18 @@ export class SettingsTab extends PluginSettingTab {
 				.setButtonText('Add Action')
 				.setCta() // Make it stand out as a primary action
 				.onClick(async () => {
-					// Ensure the array exists before pushing
-					if (!Array.isArray(this.plugin.settings.contextMenuActions)) {
-						this.plugin.settings.contextMenuActions = []
-					}
-					this.plugin.settings.contextMenuActions.push({ name: '', prompt: '' })
+					// Create a new prompt action
+					this.plugin.settings.actions.push({
+						id: `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+						name: '',
+						type: 'prompt',
+						prompt: ''
+					})
 					await this.plugin.saveSettings()
 					this.display() // Re-render to show the new action fields
 				}))
 
-		// --- End Context Menu Actions Section ---
+		// --- End Unified Actions Section ---
 
 
 		// Now that all elements are created, attempt initial model population
