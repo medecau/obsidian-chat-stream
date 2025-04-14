@@ -10,7 +10,7 @@ export type ChatModelSettings = {
 }
 
 // Update defaultChatGPTSettings to use a hardcoded default model
-export const defaultChatGPTSettings: Partial<openai.CreateChatCompletionRequest> =
+export const defaultChatGPTSettings: Partial<openai.CreateResponsesRequest> =
 {
 	model: 'gpt-3.5-turbo', // Using hardcoded default as CHAT_MODELS is removed
 	max_tokens: 500,
@@ -24,10 +24,10 @@ export const defaultChatGPTSettings: Partial<openai.CreateChatCompletionRequest>
 export async function getChatGPTCompletion(
 	apiKey: string,
 	_apiUrl: string, // Parameter ignored, using constant below
-	model: openai.CreateChatCompletionRequest['model'],
-	input: openai.CreateChatCompletionRequest['messages'],
+	model: openai.CreateResponsesRequest['model'],
+	input: openai.ChatCompletionRequestMessage[] | openai.CreateResponsesRequest['input'],
 	settings?: Partial<
-		Omit<openai.CreateChatCompletionRequest, 'messages' | 'model'>
+		Omit<openai.CreateResponsesRequest, 'input' | 'model'>
 	>
 ): Promise<string | undefined> {
 	const headers = {
@@ -46,8 +46,22 @@ export async function getChatGPTCompletion(
 		console.debug('Corrected model name from o3 to gpt-4o')
 	}
 
+	// Convert input to the format expected by the API
+	const formattedInput = input.map(msg => {
+		// If content is an array (for image URLs, etc.), convert it to a string representation
+		// This is a simplification - in a real implementation, you might need more complex handling
+		const content = typeof msg.content === 'string'
+			? msg.content
+			: JSON.stringify(msg.content)
+
+		return {
+			role: msg.role,
+			content: content
+		}
+	})
+
 	const body = {
-		input,
+		input: formattedInput,
 		model: modelName,
 		...settings
 	}

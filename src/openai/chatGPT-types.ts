@@ -7,7 +7,22 @@
 
 export type Role = 'user' | 'assistant' | 'system' | 'developer'
 
+export type ChatCompletionRequestMessageRoleEnum = 'user' | 'assistant' | 'system'
+
+export interface ChatCompletionRequestMessage {
+	role: ChatCompletionRequestMessageRoleEnum
+	content: string | Array<{ type: string;[key: string]: any }>
+}
+
 export namespace openai {
+	// Re-export the types for use within the namespace
+	export type ChatCompletionRequestMessageRoleEnum = 'user' | 'assistant' | 'system'
+
+	export interface ChatCompletionRequestMessage {
+		role: ChatCompletionRequestMessageRoleEnum
+		content: string | Array<{ type: string;[key: string]: any }>
+	}
+
 	export interface CreateResponsesRequest {
 		model: string
 		input: Array<{ role: string; content: string }>

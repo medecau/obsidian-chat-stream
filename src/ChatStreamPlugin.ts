@@ -1,4 +1,5 @@
 import { Plugin, App, PluginManifest, Menu, Editor, MarkdownView, EventRef } from 'obsidian' // Added Menu, Editor, MarkdownView, EventRef
+// Import the type declarations
 import {
 	ChatStreamSettings,
 	DEFAULT_SETTINGS
@@ -69,7 +70,7 @@ export class ChatStreamPlugin extends Plugin {
 
 		// Add context menu item for Canvas notes
 		this.registerEvent(
-			this.app.workspace.on('canvas:node-menu', (menu: Menu, node: any) => { // Changed CanvasNode to any
+			this.app.workspace.on('canvas:node-menu', (menu: Menu, node: CanvasNode) => {
 				// Ensure we have a node and its associated canvas before adding items
 				if (node && node.canvas) {
 					// Optional: Check if it's a text node if needed later
@@ -82,7 +83,7 @@ export class ChatStreamPlugin extends Plugin {
 							.setTitle('ChatStream: Generate Content')
 							.setIcon('lucide-sparkles') // Or 'brain-circuit', 'bot', etc.
 							.onClick(async () => {
-								const {canvas} = node
+								const { canvas } = node
 								this.logDebug('Context menu item clicked for node:', node.id)
 
 								// generateNote uses the current selection, so select the target node first
