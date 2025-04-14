@@ -5,6 +5,12 @@ export interface ChatStreamAction {
 	prompt: string
 }
 
+export interface CustomAction {
+	id: string
+	label: string
+	command: string
+}
+
 export interface ChatStreamSettings {
 	/**
 	 * The API key to use when making requests
@@ -54,6 +60,10 @@ export interface ChatStreamSettings {
 	 * Custom triggers available in the context menu.
 	 */
 	contextMenuActions: ChatStreamAction[]
+	/**
+	 * Custom actions defined by the user to appear in the context menu.
+	 */
+	customActions: CustomAction[]
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `
@@ -74,7 +84,8 @@ export const DEFAULT_SETTINGS: ChatStreamSettings = {
 	maxInputTokens: 0,
 	maxResponseTokens: 0,
 	maxDepth: 0,
-	contextMenuActions: []
+	contextMenuActions: [],
+	customActions: []
 }
 
 export async function fetchModels(apiUrl: string, apiKey: string): Promise<string[]> {

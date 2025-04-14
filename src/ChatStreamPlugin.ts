@@ -28,8 +28,6 @@ export class ChatStreamPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings()
 
-
-
 		this.logDebug = this.settings.debug
 			? (message?: unknown, ...optionalParams: unknown[]) =>
 				console.debug('Chat Stream: ' + message, ...optionalParams)
@@ -71,13 +69,14 @@ export class ChatStreamPlugin extends Plugin {
 
 		// Add context menu item for Canvas notes
 		this.registerEvent(
-			this.app.workspace.on('canvas:node-menu', (menu: Menu, node: CanvasNode) => {
-				// Ensure we have a node and its associated canvas
+			this.app.workspace.on('canvas:node-menu', (menu: Menu, node: any) => { // Changed CanvasNode to any
+				// Ensure we have a node and its associated canvas before adding items
 				if (node && node.canvas) {
 					// Optional: Check if it's a text node if needed later
 					// const nodeData = node.getData();
 					// if (nodeData.type === 'text' || nodeData.type === 'file') { ... }
 
+					// Add original "Generate Content" item
 					menu.addItem((item) => {
 						item
 							.setTitle('ChatStream: Generate Content')
@@ -95,6 +94,49 @@ export class ChatStreamPlugin extends Plugin {
 								generator.generateNote()
 							})
 					})
+
+					// Add custom actions from settings, check if array exists
+					if (this.settings.customActions && Array.isArray(this.settings.customActions)) {
+						this.settings.customActions.forEach(action => {
+							if (action.id && action.label && action.command) { // Basic validation
+								menu.addItem((item) => {
+									item
+										.setTitle(action.label)
+										.setIcon('lucide-run') // Example icon, adjust as needed
+										.onClick(async () => {
+											this.logDebug(`Executing custom action command: ${action.command} for node: ${node.id}`)
+											try {
+												// Use node context if needed by the command in the future, for now just execute
+												// Use type assertion to bypass potential App type definition issue
+												await (this.app as any).commands.executeCommandById(action.command)
+											} catch (error) {
+												console.error(`Error executing command '${action.command}':`, error)
+												// Optionally notify the user via Obsidian's notice system
+												// new Notice(`Failed to execute action: ${action.label}`);
+											}
+										})
+								})
+							}
+						})
+					}
+
+					// Also add canvas actions from settings.contextMenuActions if defined
+					if (this.settings.contextMenuActions && Array.isArray(this.settings.contextMenuActions)) {
+						this.settings.contextMenuActions.forEach(action => {
+							if (action.name && action.prompt) {
+								menu.addItem((item) => {
+									item
+										.setTitle(action.name)
+										.setIcon('lucide-wand')
+										.onClick(async () => {
+											this.logDebug(`Executing canvas context menu action with prompt: ${action.prompt}`)
+											// For canvas nodes, no editor is available. Trigger note generation.
+											generator.generateNote()
+										})
+								})
+							}
+						})
+					}
 				}
 			})
 		)
