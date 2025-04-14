@@ -58,10 +58,10 @@ export function noteGenerator(
 
 		await canvas.requestFrame()
 
-		const {selection} = canvas
+		const { selection } = canvas
 		if (selection?.size !== 1) {
-    return
-  }
+			return
+		}
 		const values = Array.from(selection.values()) as CanvasNode[]
 		const node = values[0]
 
@@ -106,7 +106,7 @@ export function noteGenerator(
 		return foundPrompt || settings.systemPrompt
 	}
 
-	const buildMessages = async (node: CanvasNode) => {
+	const buildMessages = async (node: CanvasNode, actionPrompt?: string) => {
 		const encoding = getEncoding(settings)
 
 		const messages: openai.ChatCompletionRequestMessage[] = []
@@ -121,8 +121,8 @@ export function noteGenerator(
 
 		const visit = async (node: CanvasNode, depth: number) => {
 			if (settings.maxDepth && depth > settings.maxDepth) {
-     return false
-   }
+				return false
+			}
 
 			const nodeData = node.getData()
 			let nodeText = (await readNodeContent(node))?.trim() || ''
@@ -143,8 +143,8 @@ export function noteGenerator(
 				})
 			} else {
 				if (isSystemPromptNode(nodeText)) {
-      return true
-    }
+					return true
+				}
 
 				let nodeTokens = encoding.encode(nodeText)
 				let keptNodeTokens: number
@@ -190,16 +190,27 @@ export function noteGenerator(
 				})
 			}
 
+			// Add action prompt as a user message if provided
+			if (actionPrompt) {
+				messages.push({
+					content: actionPrompt,
+					role: 'user'
+				})
+
+				// Add the token count for the action prompt
+				tokenCount += encoding.encode(actionPrompt).length
+			}
+
 			return { messages, tokenCount }
 		} else {
 			return { messages: [], tokenCount: 0 }
 		}
 	}
 
-	const generateNote = async () => {
+	const generateNote = async (actionPrompt?: string) => {
 		if (!canCallAI()) {
-    return
-  }
+			return
+		}
 
 		logDebug('Creating AI note')
 
@@ -211,10 +222,10 @@ export function noteGenerator(
 
 		await canvas.requestFrame()
 
-		const {selection} = canvas
+		const { selection } = canvas
 		if (selection?.size !== 1) {
-    return
-  }
+			return
+		}
 		const values = Array.from(selection.values())
 		const node = values[0]
 
@@ -223,10 +234,10 @@ export function noteGenerator(
 			await canvas.requestSave()
 			await sleep(200)
 
-			const { messages, tokenCount } = await buildMessages(node)
+			const { messages, tokenCount } = await buildMessages(node, actionPrompt)
 			if (!messages.length) {
-     return
-   }
+				return
+			}
 
 			const created = createNode(
 				canvas,

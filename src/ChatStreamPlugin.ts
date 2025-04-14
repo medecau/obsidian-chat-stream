@@ -107,8 +107,13 @@ export class ChatStreamPlugin extends Plugin {
 										.onClick(async () => {
 											if (action.prompt) {
 												this.logDebug(`Executing canvas prompt action with prompt: ${action.prompt}`)
-												// For canvas nodes, no editor is available. Trigger note generation.
-												generator.generateNote()
+												// For canvas nodes, pass the action prompt to the generator
+												const { canvas } = node
+												canvas.selectOnly(node, false) // Select the node, don't start editing
+												await canvas.requestSave() // Allow selection to register
+												await sleep(50) // Brief pause before triggering generation
+
+												generator.generateNote(action.prompt)
 											}
 										})
 								})
