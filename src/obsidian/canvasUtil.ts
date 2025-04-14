@@ -10,7 +10,7 @@ export type NodeVisitor = (node: HasId, depth: number) => Promise<boolean>
  * Get parents for canvas node
  */
 export function nodeParents(node: CanvasNode) {
-	const canvas = node.canvas
+	const {canvas} = node
 	const nodes = canvas
 		.getEdgesForNode(node)
 		.filter((edge) => edge.to.node.id === node.id)

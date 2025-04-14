@@ -32,7 +32,7 @@ export async function readFileContent(
 }
 
 export async function readNodeContent(node: CanvasNode) {
-	const app = node.app
+	const {app} = node
 	const nodeData = node.getData()
 	switch (nodeData.type) {
 		case 'text':

@@ -154,11 +154,15 @@ export const addEdge = (
 	fromEdge: CanvasEdgeIntermediate,
 	toEdge: CanvasEdgeIntermediate
 ) => {
-	if (!canvas) return
+	if (!canvas) {
+   return
+ }
 
 	const data = canvas.getData()
 
-	if (!data) return
+	if (!data) {
+   return
+ }
 
 	canvas.importData({
 		edges: [

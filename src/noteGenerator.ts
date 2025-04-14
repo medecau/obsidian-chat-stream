@@ -58,8 +58,10 @@ export function noteGenerator(
 
 		await canvas.requestFrame()
 
-		const selection = canvas.selection
-		if (selection?.size !== 1) return
+		const {selection} = canvas
+		if (selection?.size !== 1) {
+    return
+  }
 		const values = Array.from(selection.values()) as CanvasNode[]
 		const node = values[0]
 
@@ -118,7 +120,9 @@ export function noteGenerator(
 		}
 
 		const visit = async (node: CanvasNode, depth: number) => {
-			if (settings.maxDepth && depth > settings.maxDepth) return false
+			if (settings.maxDepth && depth > settings.maxDepth) {
+     return false
+   }
 
 			const nodeData = node.getData()
 			let nodeText = (await readNodeContent(node))?.trim() || ''
@@ -138,7 +142,9 @@ export function noteGenerator(
 					role: 'user'
 				})
 			} else {
-				if (isSystemPromptNode(nodeText)) return true
+				if (isSystemPromptNode(nodeText)) {
+      return true
+    }
 
 				let nodeTokens = encoding.encode(nodeText)
 				let keptNodeTokens: number
@@ -191,7 +197,9 @@ export function noteGenerator(
 	}
 
 	const generateNote = async () => {
-		if (!canCallAI()) return
+		if (!canCallAI()) {
+    return
+  }
 
 		logDebug('Creating AI note')
 
@@ -203,8 +211,10 @@ export function noteGenerator(
 
 		await canvas.requestFrame()
 
-		const selection = canvas.selection
-		if (selection?.size !== 1) return
+		const {selection} = canvas
+		if (selection?.size !== 1) {
+    return
+  }
 		const values = Array.from(selection.values())
 		const node = values[0]
 
@@ -214,7 +224,9 @@ export function noteGenerator(
 			await sleep(200)
 
 			const { messages, tokenCount } = await buildMessages(node)
-			if (!messages.length) return
+			if (!messages.length) {
+     return
+   }
 
 			const created = createNode(
 				canvas,

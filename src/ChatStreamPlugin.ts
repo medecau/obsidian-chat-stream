@@ -82,7 +82,7 @@ export class ChatStreamPlugin extends Plugin {
 							.setTitle('ChatStream: Generate Content')
 							.setIcon('lucide-sparkles') // Or 'brain-circuit', 'bot', etc.
 							.onClick(async () => {
-								const canvas = node.canvas
+								const {canvas} = node
 								this.logDebug('Context menu item clicked for node:', node.id)
 
 								// generateNote uses the current selection, so select the target node first
